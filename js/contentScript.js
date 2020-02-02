@@ -47,6 +47,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               {
                 field: "itemid",
                 title: `<span data-toggle="kt-tooltip" data-skin="primary"  data-placement="top" title="" data-original-title="Item ID">Item ID</span>`,
+                width: 100
               }, {
                 field: "name",
                 title: `<span data-toggle="kt-tooltip" data-skin="primary"  data-placement="top" title="" data-original-title="Name">Name</span>`,

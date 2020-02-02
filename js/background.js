@@ -119,60 +119,65 @@ chrome.browserAction.onClicked.addListener(async (tab) => {
     if (tabUrl == 'https://shopee.vn/' || tabUrl == 'https://shopee.vn') {
       alert('Please choose any product or shop before using Shopee Crawler')
     } else {
-    //* Get Username/Shopid
-    let shop = filterUrl(tabUrl)
-    //* Get Shop Account
-    const shopAccount = shop.shopid == '' ? await getShopByUsername(shop.username) : await getShopByShopid(shop.shopid)
-    const count = Math.floor(shopAccount.data.item_count / 100)
+      //* Get Username/Shopid
+      let shop = filterUrl(tabUrl)
+      //* Get Shop Account
+      const shopAccount = shop.shopid == '' ? await getShopByUsername(shop.username) : await getShopByShopid(shop.shopid)
+      const count = Math.floor(shopAccount.data.item_count / 100)
 
-    let totalItemsData = []
-    //* Get Shop Existed Item
-    let shopItem = await getShopItemMultiple(shopAccount.data.shopid, count)
-    let shopItemId = await shopItem.reduce((x, y) => {
-      x.push(...y.items.map(a => a.itemid))
-      return x
-    }, [])
-    let itemData = await shopItemId.reduce(async (x, y) => {
-      const currentData = await getItemData(y, shopAccount.data.shopid)
-      if (currentData)
-        (await x).push(currentData.item)
-      return x
-    }, [])
+      let totalItemsData = []
+      //* Get Shop Existed Item
+      let shopItem = await getShopItemMultiple(shopAccount.data.shopid, count)
+      let shopItemId = await shopItem.reduce((x, y) => {
+        x.push(...y.items.map(a => a.itemid))
+        return x
+      }, [])
+      let itemData = await shopItemId.reduce(async (x, y) => {
+        const currentData = await getItemData(y, shopAccount.data.shopid)
+        if (currentData)
+          (await x).push(currentData.item)
+        return x
+      }, [])
 
-    //* Get Shop Sold Out Item
-    let countSoldOut = Math.floor((shopAccount.data.item_count - shopItemId.length) / 100)
-    let shopItemSoldOut = await getShopItemSoldOutMultiple(shopAccount.data.shopid, countSoldOut)
-    let shopItemIdSoldOut = await shopItemSoldOut.reduce((x, y) => {
-      x.push(...y.items.map(a => a.itemid))
-      return x
-    }, [])
-    let itemDataSoldOut = await shopItemIdSoldOut.reduce(async (x, y) => {
-      const currentData = await getItemData(y, shopAccount.data.shopid)
-      if (currentData)
-        (await x).push(currentData.item)
-      return x
-    }, [])
+      //* Get Shop Sold Out Item
+      let countSoldOut = Math.floor((shopAccount.data.item_count - shopItemId.length) / 100)
+      let shopItemSoldOut = await getShopItemSoldOutMultiple(shopAccount.data.shopid, countSoldOut)
+      let shopItemIdSoldOut = await shopItemSoldOut.reduce((x, y) => {
+        x.push(...y.items.map(a => a.itemid))
+        return x
+      }, [])
+      let itemDataSoldOut = await shopItemIdSoldOut.reduce(async (x, y) => {
+        const currentData = await getItemData(y, shopAccount.data.shopid)
+        if (currentData)
+          (await x).push(currentData.item)
+        return x
+      }, [])
 
-    //* Merge Existed And Sold Out Item
-    totalItemsData.push(...itemData.concat(itemDataSoldOut))
+      //* Merge Existed And Sold Out Item
+      totalItemsData.push(...itemData.concat(itemDataSoldOut))
 
-    //* Create tab and pass data to the contentScript
-    chrome.tabs.create({ url: chrome.runtime.getURL("content.html"), selected: true }, tab => {
-      
-      chrome.tabs.executeScript(tab.id, { file: "js/contentScript.js" }, () => {
-        const lastErr = chrome.runtime.lastError
-        if (lastErr)
-          console.log(`tab: ${tab.id} lastErorr: ${JSON.stringify(lastErr)}`)
-        chrome.tabs.sendMessage(tab.id, {
-          data: {
-            shopAccount: shopAccount,
-            totalItemsData: totalItemsData
+      //* Create tab and pass data to the contentScript
+      chrome.tabs.create({ url: chrome.runtime.getURL("content.html"), selected: true }, tab => {
+        chrome.storage.local.clear(() => {
+          const error = chrome.runtime.lastError
+          if (error) {
+            console.error(error)
           }
         })
+        chrome.tabs.executeScript(tab.id, { file: "js/contentScript.js" }, () => {
+          const lastErr = chrome.runtime.lastError
+          if (lastErr)
+            console.log(`tab: ${tab.id} lastErorr: ${JSON.stringify(lastErr)}`)
+          chrome.tabs.sendMessage(tab.id, {
+            data: {
+              shopAccount: shopAccount,
+              totalItemsData: totalItemsData
+            }
+          })
+        })
       })
-    })
     }
-    
+
   } else {
     alert('This extension only uses for Shopee.vn')
   }
